@@ -41,11 +41,16 @@ export default function HandCoordinationGame() {
       return;
     }
     
-    initGame();
+    // Wait a bit for the canvas to be ready
+    const timer = setTimeout(() => {
+      initGame();
+    }, 200);
+    
     return () => {
       if (gameRef.current) {
         clearInterval(gameRef.current);
       }
+      clearTimeout(timer);
     };
   }, [user, router]);
 
@@ -57,8 +62,57 @@ export default function HandCoordinationGame() {
     canvas.width = 800;
     canvas.height = 600;
     
+    // Test canvas drawing
+    ctx.fillStyle = '#f0f0f0';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
     // Set initial targets
     generateTargets();
+    
+    // Initial draw
+    setTimeout(() => {
+      drawTargets();
+    }, 100);
+  };
+
+  const drawTargets = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    console.log('Drawing targets:', targets);
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw each target
+    targets.forEach(target => {
+      if (target.active) {
+        console.log('Drawing target:', target);
+        ctx.beginPath();
+        ctx.arc(target.x, target.y, target.radius, 0, 2 * Math.PI);
+        ctx.fillStyle = target.color;
+        ctx.fill();
+        
+        // Add a border
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Add target center dot
+        ctx.beginPath();
+        ctx.arc(target.x, target.y, 3, 0, 2 * Math.PI);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        
+        // Add target ID for debugging
+        ctx.fillStyle = '#000';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(target.id, target.x, target.y + 4);
+      }
+    });
   };
 
   const generateTargets = () => {
@@ -77,12 +131,32 @@ export default function HandCoordinationGame() {
       });
     }
     
+    console.log('Generated targets:', newTargets);
     setTargets(newTargets);
   };
+
+  // Add useEffect to draw targets whenever they change
+  useEffect(() => {
+    if (targets.length > 0) {
+      drawTargets();
+    }
+  }, [targets]);
+
+  // Add useEffect to draw targets when game state changes
+  useEffect(() => {
+    if (gameState === 'playing' && targets.length > 0) {
+      drawTargets();
+    }
+  }, [gameState, targets]);
 
   const startGame = () => {
     setGameState('playing');
     setGameStats(prev => ({ ...prev, startTime: new Date() }));
+    
+    // Ensure targets are drawn when game starts
+    setTimeout(() => {
+      drawTargets();
+    }, 100);
     
     gameRef.current = setInterval(() => {
       setTimeLeft(prev => {
@@ -155,8 +229,15 @@ export default function HandCoordinationGame() {
     
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    
+    // Calculate the scale factor between CSS pixels and canvas pixels
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    
+    console.log('Click at:', { x, y, scaleX, scaleY });
     
     setGameStats(prev => ({ ...prev, totalShots: prev.totalShots + 1 }));
     
@@ -166,6 +247,7 @@ export default function HandCoordinationGame() {
       if (!target.active) return target;
       
       const distance = Math.sqrt((x - target.x) ** 2 + (y - target.y) ** 2);
+      console.log('Distance to target:', distance, 'Target radius:', target.radius);
       if (distance <= target.radius) {
         hit = true;
         setScore(prev => prev + target.points * 10);
@@ -180,6 +262,11 @@ export default function HandCoordinationGame() {
     }
     
     setTargets(newTargets);
+    
+    // Redraw targets after state update
+    setTimeout(() => {
+      drawTargets();
+    }, 0);
     
     // Check if all targets are hit
     if (newTargets.every(target => !target.active)) {
@@ -335,7 +422,8 @@ export default function HandCoordinationGame() {
               ref={canvasRef}
               onClick={handleCanvasClick}
               className="border-4 border-gray-300 rounded-lg cursor-crosshair bg-white shadow-lg"
-              style={{ width: '800px', height: '600px' }}
+              width="800"
+              height="600"
             />
             
             {/* Game Overlay */}

@@ -250,10 +250,10 @@ export default function Games() {
         <div className="text-center mt-16">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Can't find what you're looking for?
+              Can&apos;t find what you&apos;re looking for?
             </h2>
             <p className="text-gray-600 mb-6">
-              We're constantly adding new games and features. Let us know what type of 
+              We&apos;re constantly adding new games and features. Let us know what type of 
               rehabilitation game would help you most.
             </p>
             <button className="btn-secondary">
